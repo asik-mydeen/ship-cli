@@ -62,7 +62,7 @@ All scaffolds include TypeScript (Node), health endpoints, Supabase client, and 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ship-cli.git ~/.autodeploy
+git clone https://github.com/asik-mydeen/ship-cli.git ~/.autodeploy
 chmod +x ~/.autodeploy/ship
 sudo ln -sf ~/.autodeploy/ship /usr/local/bin/ship
 ```
