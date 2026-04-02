@@ -215,9 +215,69 @@ Each created project gets:
 |---|---|
 | `.github/workflows/deploy.yml` | Auto-deploy on push to main |
 | `.ship.json` | Project metadata (gitignored) — Dokploy IDs, domain, etc. |
-| `.env.example` | Template showing required env vars |
+| `.env.example` | Template with **placeholder values only** — never real secrets |
 | `.gitignore` | Standard ignores for the language |
 | `README.md` | Project readme with dev/deploy instructions |
+| `.npmrc` | Forces public npm registry (prevents private registry leaks) |
+| `nixpacks.toml` | Optional — pin Node version or customize build |
+
+## ⛔ Security: Secrets
+
+**Real secrets must NEVER appear in any committed file.** This includes `.env.example`, README, commit messages, and generated code.
+
+Secrets live in exactly four places:
+
+| Where | What | Committed? |
+|---|---|---|
+| `~/.autodeploy/.env` | GitHub PAT, Cloudflare token | ❌ Never |
+| `~/.autodeploy/.env.infra` | Dokploy/Supabase keys, tunnel config | ❌ Never |
+| Dokploy env vars | Runtime env for deployed apps | ❌ Set via API |
+| GitHub Actions secrets | Deploy trigger credentials | ❌ Encrypted via API |
+
+The `.env.example` in every scaffolded project uses **placeholder values only** (e.g. `your-supabase-anon-key`). The heredoc uses single quotes (`<< 'EOF'`) to prevent shell variable expansion.
+
+**If you accidentally commit a secret:**
+1. Rewrite history: `git filter-branch --force --tree-filter '...' -- --all`
+2. Force-push: `git push --force`
+3. Purge local refs: `git reflog expire --expire=now --all && git gc --prune=now`
+4. **Rotate the credential** — removing from git is not enough, it was exposed the moment it was pushed
+
+## Gotchas & Lessons Learned
+
+These were discovered during real end-to-end testing:
+
+### GitHub repo push race condition
+GitHub returns 201 for repo creation but the repo isn't immediately pushable. `ship` retries up to 5 times with 3-second backoff.
+
+### Cloudflare Tunnel needs ingress rules, not just DNS
+A DNS CNAME alone returns 404. Each new subdomain also needs an **ingress rule** in the tunnel config pointing to Dokploy's Traefik (`http://<server-ip>:80`). `ship` does both automatically.
+
+### Dokploy domains: `https: false` behind Cloudflare
+Cloudflare terminates TLS at the edge. If Dokploy is configured with `https: true`, Traefik redirects HTTP→HTTPS → **infinite redirect loop**. Always use `https: false, certificateType: none`.
+
+### Next.js `NEXT_PUBLIC_*` at build time
+Next.js inlines `NEXT_PUBLIC_*` vars during `next build`. Set them as **Dokploy build args** (not just runtime env vars), otherwise the built app won't have them.
+
+### Private npm registries leak into package-lock.json
+If `~/.npmrc` points to a private registry, `npm install` resolves from there. Always add a project `.npmrc` with `registry=https://registry.npmjs.org`.
+
+### Nixpacks > Dockerfile for most cases
+Nixpacks auto-detects language/framework and builds without config. Use `nixpacks.toml` to pin Node version. Only use Dockerfile if you need custom multi-stage builds.
+
+### Supabase RLS is mandatory
+Always enable Row Level Security on tables with user data. Without it, any authenticated user can read all rows. Create policies scoped to `auth.uid() = user_id`.
+
+### Supabase Google OAuth redirect flow
+```
+App → signInWithOAuth({redirectTo: "https://app.yourdomain.com/auth/callback"})
+  → Supabase Auth → Google consent screen
+  → Google → supabase-api.yourdomain.com/auth/v1/callback
+  → Supabase → app.yourdomain.com/auth/callback (exchanges code for session)
+```
+Google Console must have `https://supabase-api.yourdomain.com/auth/v1/callback` as an authorized redirect URI.
+
+### `pynacl` required for GitHub secrets
+GitHub Actions secrets must be encrypted with the repo's public key using libsodium sealed boxes. Install: `pip3 install pynacl`.
 
 ## Notes
 
@@ -225,7 +285,7 @@ Each created project gets:
 - **Nixpacks auto-detects** your language and build command. No Dockerfile needed (but you can add one).
 - **Supabase is optional** — answer "n" when prompted and the scaffold won't include Supabase dependencies.
 - **Python projects** include a `Procfile` for Nixpacks to detect the start command.
-- **The CLI is a single bash script** with zero dependencies beyond `bash`, `curl`, `git`, and `python3`.
+- **The CLI is a single bash script** with zero dependencies beyond `bash`, `curl`, `git`, and `python3` + `pynacl`.
 
 ## License
 
