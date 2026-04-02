@@ -411,11 +411,13 @@ export async function GET() {
 EOF
   fi
 
-  # .env.example
-  cat > .env.example << EOF
-PORT=$APP_PORT
-$SUPA_ENV
-EOF
+  # .env.example (placeholders only — never commit real secrets)
+  cat > .env.example << 'ENVEOF'
+PORT=3000
+NEXT_PUBLIC_SUPABASE_URL=https://supabase-api.example.com
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+ENVEOF
 
   ok "Next.js + TypeScript scaffold ready"
 }
@@ -492,10 +494,12 @@ app.listen(PORT, '0.0.0.0', () => {
 })
 EOF
 
-  cat > .env.example << EOF
-PORT=$APP_PORT
-$(echo "$SUPA_ENV" | sed 's/NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL/; s/NEXT_PUBLIC_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY/')
-EOF
+  cat > .env.example << 'ENVEOF'
+PORT=3000
+SUPABASE_URL=https://supabase-api.example.com
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+ENVEOF
 
   ok "Express + TypeScript scaffold ready"
 }
@@ -565,10 +569,12 @@ EOF
 web: uvicorn main:app --host 0.0.0.0 --port \${PORT:-$APP_PORT}
 EOF
 
-  cat > .env.example << EOF
-PORT=$APP_PORT
-$(echo "$SUPA_ENV" | sed 's/NEXT_PUBLIC_//g')
-EOF
+  cat > .env.example << 'ENVEOF'
+PORT=3000
+SUPABASE_URL=https://supabase-api.example.com
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+ENVEOF
 
   ok "FastAPI scaffold ready"
 }
@@ -608,10 +614,12 @@ EOF
 web: gunicorn main:app --bind 0.0.0.0:\${PORT:-$APP_PORT}
 EOF
 
-  cat > .env.example << EOF
-PORT=$APP_PORT
-$(echo "$SUPA_ENV" | sed 's/NEXT_PUBLIC_//g')
-EOF
+  cat > .env.example << 'ENVEOF'
+PORT=3000
+SUPABASE_URL=https://supabase-api.example.com
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+ENVEOF
 
   ok "Flask scaffold ready"
 }
@@ -661,10 +669,12 @@ async fn main() {
 }
 EOF
 
-  cat > .env.example << EOF
-PORT=$APP_PORT
-$(echo "$SUPA_ENV" | sed 's/NEXT_PUBLIC_//g')
-EOF
+  cat > .env.example << 'ENVEOF'
+PORT=3000
+SUPABASE_URL=https://supabase-api.example.com
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+ENVEOF
 
   ok "Axum scaffold ready"
 }
